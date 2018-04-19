@@ -1,4 +1,4 @@
-﻿#nowarn"58"
+﻿//#nowarn"58"
 namespace global
 [<AutoOpen>]
 module Utilities=
@@ -42,68 +42,42 @@ module Metro=
     module Grids=
         let create w h=(w,h)
         let enum(w,h)={5..10..w-1}|>Seq.collect(fun x->{5..10..h-1}|>Seq.map(fun y->x,y))
+    module Stop=
+        let getStation,getNumber=fst,snd
+    module Line=
+        let passes line station=line|>Seq.map Stop.getStation|>Seq.contains station
+        let start stop=[stop]
+        let add exsisting stop=stop::exsisting
+        let random getStop stations length=
+            let station=Random.pick stations
+            let remain=List.except[station]stations
+            let a=start<|getStop station
+            let pick remain=
+                if List.isEmpty remain then None else
+                    let station=Random.pick remain
+                    let remain=List.except[station]remain
+                    Some(station,remain)
+            let followings=List.unfold pick remain
+            followings|>List.take length|>List.map getStop|>List.fold add a
     module Station=
         let random=Grids.enum>>Random.pick
         let randomSeq n size=(fun _->random size)|>Seq.init n
         let create a=a
-    /////连接，两个站台中间的地铁线连接，暂时似乎用不到……
-    //[<Obsolete>]module Connection=
-    //    let all network=[network;Seq.rev network]|>Seq.concat|>Seq.pairwise
-    //    let existings a b=all>>Seq.filter(fun(c,d)->a=c&&b=d)
-    /////站台，一个地铁站有多个站台，每个站台接一个地铁线
-    //module Stop=
-    //    let all network=[network;Seq.rev network]|>Seq.concat|>Seq.pairwise
-    //    let existings a b=all>>Seq.filter(fun(c,d)->a=c&&b=d)
-    module Line=
-        let start station=[station]
-        let add exsisting a=a::exsisting
-        let random stations length=
-            let station=Random.pick stations
-            let remain=List.except[station]stations
-            let a=start station
-            let pick remain=
-                if List.isEmpty remain then None else
-                    let station=Random.pick remain
-                    let remain=List.except [station] remain
-                    Some(station,remain)
-            let followings=List.unfold pick remain
-            followings|>List.take length|>List.fold add a
-    module SupportsStop=
-        module Stop=
-            let getStation,getNumber=fst,snd
-        module Line2=
-            let passes line station=line|>Seq.map Stop.getStation|>Seq.contains station
-        module Station=
-            let countConnections station lines=lines|>Seq.filter(fun line->Line2.passes line station)|>Seq.length
-            let getStop lines station=station,countConnections station lines
-        module Line=
-            let start stop=[stop]
-            let add exsisting stop=stop::exsisting
-            let random getStop stations length=
-                let station=Random.pick stations
-                let remain=List.except[station]stations
-                let a=start<|getStop station
-                let pick remain=
-                    if List.isEmpty remain then None else
-                        let station=Random.pick remain
-                        let remain=List.except[station]remain
-                        Some(station,remain)
-                let followings=List.unfold pick remain
-                followings|>List.take length|>List.map getStop|>List.fold add a
-        module Network=
-            let random stations=
-                let line existingLines=
-                    let line=Line.random(Station.getStop existingLines)stations 3
-                    Some(line,line::existingLines)
-                Seq.unfold line []
+        let countConnections station lines=lines|>Seq.filter(fun line->Line.passes line station)|>Seq.length
+        let getStop lines station=station,countConnections station lines
+    module Network=
+        let random stations=
+            let line existingLines=
+                let line=Line.random(Station.getStop existingLines)stations 3
+                Some(line,line::existingLines)
+            Seq.unfold line []
     let sample=
         let grids=Grids.create 99 99
         let stations=grids|>Station.randomSeq 5|>Seq.toList
-        let lines=SupportsStop.Network.random stations|>Seq.take 3|>Seq.toList
+        let lines=Network.random stations|>Seq.take 3|>Seq.toList
         //let lines=[Line.random stations 4;Line.random stations 3;Line.random stations 2]
         grids,(stations,lines)
 module Presentation=
-    open Metro.SupportsStop
     //type[<Measure>]m and[<Measure>]dm and[<Measure>]cm
     //let cmPerM=1000<cm/m>
     module Line=
