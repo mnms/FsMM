@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2037
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Metro", "Metro.fsproj", "{A94FAFFA-68C5-4806-BB38-494F06FC1573}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "WPF", "WPF\WPF.fsproj", "{4909D5EF-3C49-4ADC-9DBD-2288886FEC29}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A94FAFFA-68C5-4806-BB38-494F06FC1573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A94FAFFA-68C5-4806-BB38-494F06FC1573}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A94FAFFA-68C5-4806-BB38-494F06FC1573}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A94FAFFA-68C5-4806-BB38-494F06FC1573}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4909D5EF-3C49-4ADC-9DBD-2288886FEC29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4909D5EF-3C49-4ADC-9DBD-2288886FEC29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4909D5EF-3C49-4ADC-9DBD-2288886FEC29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4909D5EF-3C49-4ADC-9DBD-2288886FEC29}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B4F5DFEA-191F-4801-A3ED-2CB75926BE8F}
+	EndGlobalSection
+EndGlobal
