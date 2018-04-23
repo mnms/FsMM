@@ -1,4 +1,4 @@
-﻿//#nowarn"58"
+﻿//#nowarn"58"//when use ObsoleteAttribute on module
 namespace global
 [<AutoOpen>]
 module Utilities=
@@ -29,6 +29,8 @@ module Grid=
     type Grid=int*int
     type Index=int
     type Position=Index*Index
+    let create w h=(w,h)
+    let enum(w,h)={5..10..w-1}|>Seq.collect(fun x->{5..10..h-1}|>Seq.map(fun y->x,y))
 module Metro=
     //open Geometry
     //open Flat
@@ -36,45 +38,58 @@ module Metro=
     open Grid
     type Size=Grid
     type Station=Position
-    type Line=Station list
-    type Metro=Station list*Line list
-    type Game=Size*Metro
-    module Grids=
-        let create w h=(w,h)
-        let enum(w,h)={5..10..w-1}|>Seq.collect(fun x->{5..10..h-1}|>Seq.map(fun y->x,y))
     module Stop=
+        type Direction=Top|Bottom|Left|Right|TopLeft|TopRight|BottomLeft|BottomRight|[<Obsolete>]Obsolete
+        type Index=int
+        type Position=Direction*Index
+        type Stop=Station*Position
+        let positions=[0;1;-1;2;-2]
         let getStation,getNumber=fst,snd
     module Line=
+        type Line=Stop.Stop list
         let passes line station=line|>Seq.map Stop.getStation|>Seq.contains station
         let start stop=[stop]
-        let add exsisting stop=stop::exsisting
-        let random getStop stations length=
-            let station=Random.pick stations
-            let remain=List.except[station]stations
-            let a=start<|getStop station
-            let pick remain=
-                if List.isEmpty remain then None else
-                    let station=Random.pick remain
-                    let remain=List.except[station]remain
-                    Some(station,remain)
-            let followings=List.unfold pick remain
-            followings|>List.take length|>List.map getStop|>List.fold add a
+        let link exsistings stop=stop::exsistings
+        type Connection=Stop.Stop*Stop.Stop
+        module ConnectionBetweenTwoStops=
+            let areSame(a,b)(c,d)=a=c&&b=d||a=d&&b=c
+            let existingConnections a b network=0//TODO:network|>Seq.collect(fun a->[a;Seq.rev a])|>Seq.
+            let tryConnect a b existingNetwork=
+                let getStations(a,b)=Stop.getStation a,Stop.getStation b
+                let isOn45Degree((x1,y1),(x2,y2))=x1=x2||y1=y2||abs x1-x2=abs y1-y2
+                if getStations(a,b)|>isOn45Degree&&existingConnections a b existingNetwork=3 then None else Some([a;b])
     module Station=
-        let random=Grids.enum>>Random.pick
+        let random=Grid.enum>>Random.pick
         let randomSeq n size=(fun _->random size)|>Seq.init n
         let create a=a
         let countConnections station lines=lines|>Seq.filter(fun line->Line.passes line station)|>Seq.length
-        let getStop lines station=station,countConnections station lines
-    module Network=
-        let random stations=
-            let line existingLines=
-                let line=Line.random(Station.getStop existingLines)stations 3
-                Some(line,line::existingLines)
-            Seq.unfold line []
-    let sample=
-        let grids=Grids.create 99 99
+        let getStop lines station=station,(Stop.Obsolete,countConnections station lines)
+    type Metro=Station list*Line.Line list
+    module PlayerOperations=
+        module FakePlayer=
+            module Random=
+                let line getStop stations length=
+                    let station=Random.pick stations
+                    let remain=List.except[station]stations
+                    let a=Line.start<|getStop station
+                    let pick remain=
+                        if List.isEmpty remain then None else
+                            let station=Random.pick remain
+                            let remain=List.except[station]remain
+                            Some(station,remain)
+                    let followings=List.unfold pick remain
+                    followings|>List.take length|>List.map getStop|>List.fold Line.link a
+                let network stations=
+                    let line existingLines=
+                        let line=line(Station.getStop existingLines)stations 3
+                        Some(line,line::existingLines)
+                    Seq.unfold line []
+    type Game=Size*Metro
+    open PlayerOperations.FakePlayer.Random
+    let sample:Game=
+        let grids=Grid.create 99 99
         let stations=grids|>Station.randomSeq 5|>Seq.toList
-        let lines=Network.random stations|>Seq.take 3|>Seq.toList
+        let lines=network stations|>Seq.take 3|>Seq.toList
         //let lines=[Line.random stations 4;Line.random stations 3;Line.random stations 2]
         grids,(stations,lines)
 module Presentation=
@@ -84,7 +99,7 @@ module Presentation=
         let calculate stops=
             let calculatePointsForStop exsistings=
                 let current,previous=List.head exsistings,exsistings|>List.tail|>List.head
-                let applyStopNumberPositionFix((x,y),stop)=
+                let applyStopNumberPositionFix((x,y),(_,stop))=
                     let positions=[0;1;-1;2;-2]
                     let fix=positions.[stop]
                     x+fix,y+fix
