@@ -5,13 +5,19 @@ module Utilities=
     type ObsoleteAttribute=System.ObsoleteAttribute
     let notSupported()=raise<|System.NotSupportedException()
     module Random=
-        let private a=lazy System.Random()
-        let get()=a.Force()
-        let next()=get().Next()
-        let lessThan exclusiveMax=get().Next exclusiveMax
+        //Another consideration: https://stackoverflow.com/questions/1399039/best-way-to-seed-random-in-singleton
+        type Random=System.Random
+        let lessThan exclusiveMax=
+            let a=lazy Random()
+            let get()=a.Force()
+            //let next()=get().Next()
+            get().Next exclusiveMax
         let pick seq=
             assert(not<|Seq.isEmpty seq)
             lessThan<|Seq.length seq|>Seq.item<|seq
+    module Seq=
+        open Random
+        let shuffle __=let a=Random()in Seq.sortBy(fun _->a.Next())__
 module Geometry=
     type Quantity=float
     ///1 dimensional
@@ -93,10 +99,10 @@ module Metro=
         module FakePlayer=
             module Random=
                 //let connection stop line network=
-                let line existingLines stations=
-                    let station=Random.pick stations
-                    let remainStations=List.except[station]stations
-                    let a,b=ConnectionBetweenTwoStationEntries.availableConnections station remainStations existingLines|>Seq.head
+                let line startStation existingLines stations=
+                    //let startStation=Random.pick stations
+                    let remainStations=List.except[startStation]stations
+                    let a,b=ConnectionBetweenTwoStationEntries.availableConnections startStation remainStations existingLines|>Seq.head
                     let remainStations=List.except[Entry.getStation b]remainStations
                     let followingConnections=
                         let f(previousEntry,remainStations)=
@@ -108,10 +114,11 @@ module Metro=
                         List.unfold f (b,remainStations)
                     followingConnections|>List.fold Line.link [a,b]
                 let network stations=
-                    let line network=
-                        let line=line network stations|>List.take 3
-                        Some(line,line::network)
-                    Seq.unfold line []
+                    let line network startStation=
+                        let line=line startStation network stations|>List.take 3
+                        line,line::network
+                    //Seq.unfold line []
+                    stations|>Seq.shuffle|>Seq.mapFold line []|>fst //TODO:对shuffle在逻辑链中的次序做更多测试
     type Metro=Station list*Network
     type Game=Size*Metro
     open PlayerOperations.FakePlayer.Random
@@ -156,3 +163,4 @@ module Presentation=
             let p remain=if List.isEmpty remain then None else Some(calculatePointsForConnection<|List.head remain,List.tail remain)
             connections|>List.unfold p|>List.concat
     let sample=Metro.sample|>fun(grid,(stations,lines))->grid,(stations,lines|>List.map Line.calculate)
+//TODO:list/seq
