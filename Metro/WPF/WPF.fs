@@ -2,7 +2,6 @@
 module Program=
     open System.Windows.Controls
     open System.Windows
-    open Metro
     module Draw=
         open System.Windows.Shapes
         open System.Windows.Media
@@ -21,7 +20,6 @@ module Program=
                 List.map(fun(a,b)->Point(scale a,scale b))a|>PointCollection|>polyline:>UIElement
             let drawMetro(stations,lines)a=
                 let addAll(a:Canvas)b=b|>List.iter(fun b->a.Children.Add b|>ignore);a
-                let lines=lines|>List.map Presentation.Line.calculate
                 List.mapi drawLine lines@List.map drawStation stations|>addAll a
             let canvas(width,height)=let a=Canvas()in a.Width<-scale width;a.Height<-scale height;a
             let surface size=
@@ -30,7 +28,7 @@ module Program=
                 a
             surface size|>drawMetro metro
         let load(w:Window)=
-            let game=sample
+            let game=Presentation.sample
             w.Content<-draw game
     open Draw
     let buildMainWindow _=
