@@ -115,10 +115,10 @@ module Metro=
                     followingConnections|>List.fold Line.link [a,b]
                 let network stations=
                     let line network startStation=
-                        let line=line startStation network stations|>List.take 3
+                        let line=line startStation network stations|>List.take 3 //TODO:有的有有的没有，需要更新line函数
                         line,line::network
                     //Seq.unfold line []
-                    stations|>Seq.shuffle|>Seq.mapFold line []|>fst //TODO:对shuffle在逻辑链中的次序做更多测试
+                    stations|>Seq.shuffle|>Seq.mapFold line []|>fst //TODO:对shuffle在Seq链中的次序做更多测试，测试把shuffle放在mapFold后面是否还能在mapFold过程中得到正确的state
     type Metro=Station list*Network
     type Game=Size*Metro
     open PlayerOperations.FakePlayer.Random
