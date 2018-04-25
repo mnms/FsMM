@@ -7,17 +7,18 @@ module Utilities=
     module Random=
         //Another consideration: https://stackoverflow.com/questions/1399039/best-way-to-seed-random-in-singleton
         type Random=System.Random
+        let private a=lazy Random()
+        let private get()=a.Force()
+        //let next()=get().Next()
         let lessThan exclusiveMax=
-            let a=lazy Random()
-            let get()=a.Force()
-            //let next()=get().Next()
             get().Next exclusiveMax
-        let pick seq=
+        let pick seq= //TODO:try replace to return seq, prevent the function returns only one random
             assert(not<|Seq.isEmpty seq)
             lessThan<|Seq.length seq|>Seq.item<|seq
-    module Seq=
-        open Random
-        let shuffle __=let a=Random()in Seq.sortBy(fun _->a.Next())__
+    //module Seq=
+    //    open Random
+    //    ///洗牌——打乱顺序
+    //    let shuffle __=let a=Random()in Seq.sortBy(fun _->a.Next())__
 module Geometry=
     type Quantity=float
     ///1 dimensional
@@ -45,7 +46,7 @@ module Geometry=
             let getDirection(x1,y1)(x2,y2)=
                 if y1=y2 then if x1=x2 then notSupported()elif x1<x2 then Left else Right
                     elif y1>y2 then if x1=x2 then Up elif x1<x2 then UpperLeft else UpperRight
-                        elif x1=x2 then Down elif x1<x2 then LowerLeft else LowerRight
+                    elif x1=x2 then Down elif x1<x2 then LowerLeft else LowerRight
 module Metro=
     open Geometry.Plane
     open RelativeDirection
@@ -67,20 +68,19 @@ module Metro=
         module DirectConnectionBetweenTwoStations=
             //let mapOppositeEntriesOfTwoStations a b=getDirection a b|>fun direction->direction,oppositeOf direction
             let canConnectWithoutRedirect=isOn45Degree
-            let getEntriesForDirectConnection direction station=
-                let threeEntriesOnCenter=[0;1;-1]|>Seq.map(fun index->direction,enum<Entry.Index>index)
+            let getEntriesForDirectConnect direction=
+                let threeEntriesOnCenter=[Entry.Index.Center;Entry.Index.Next;Entry.Index.Previous]|>Seq.map(fun index->direction,index)
                 threeEntriesOnCenter
-            let getDirectConnections a b=a|>getEntriesForDirectConnection(getDirection a b)|>Seq.map(fun a->a,Entry.getOpposite a)|>Seq.map(fun(entryA,entryB)->(a,entryA),(b,entryB))
+            let getDirectConnections a b=getEntriesForDirectConnect(getDirection a b)|>Seq.map(fun a->a,Entry.getOpposite a)|>Seq.map(fun(entryA,entryB)->(a,entryA),(b,entryB))
             let enumerate a b=if canConnectWithoutRedirect(a,b)then getDirectConnections a b else Seq.empty
-        //let tryConnect a b existingNetwork=()
         let availableConnections entry remainStations network=
             let getLineStations connections=(connections|>List.head|>fst)::(connections|>List.map snd)
             //let remainStations=getLineStations line|>Seq.except<|stations
             let availableConnections=remainStations|>Seq.collect(fun a->DirectConnectionBetweenTwoStations.enumerate entry a)
             let built=network|>Seq.concat
             let unbuilt=
-                let isBuilt __=built|>Seq.exists(fun a->areSame a __)
-                availableConnections|>Seq.filter isBuilt
+                let isBuilt a=built|>Seq.exists(fun b->areSame a b)
+                availableConnections|>Seq.filter(not<<isBuilt)
             unbuilt
     type Connection=Entry*Entry
     module Line=
@@ -99,32 +99,27 @@ module Metro=
         module FakePlayer=
             module Random=
                 //let connection stop line network=
-                let line startStation existingLines stations=
-                    //let startStation=Random.pick stations
-                    let remainStations=List.except[startStation]stations
-                    let a,b=ConnectionBetweenTwoStationEntries.availableConnections startStation remainStations existingLines|>Seq.head
-                    let remainStations=List.except[Entry.getStation b]remainStations
+                let line startStation network remainStations=
                     let followingConnections=
-                        let f(previousEntry,remainStations)=
-                            if List.isEmpty remainStations then None else
-                                let station=Entry.getStation previousEntry
-                                let a,b=ConnectionBetweenTwoStationEntries.availableConnections station remainStations existingLines|>Seq.head
-                                let remainStations=List.except[Entry.getStation b]stations
-                                Some((a,b),(b,remainStations))
-                        List.unfold f (b,remainStations)
-                    followingConnections|>List.fold Line.link [a,b]
+                        let f(startStation,remainStations)=
+                            if List.isEmpty remainStations then None else //TODO:处理没有直线可连的情况
+                                let a=ConnectionBetweenTwoStationEntries.availableConnections startStation remainStations network|>Seq.tryHead
+                                let f(a,b)=(a,b),(Entry.getStation b,List.except[Entry.getStation b]remainStations)
+                                a|>Option.map f
+                        List.unfold f (startStation,List.except[startStation]remainStations)
+                    followingConnections|>List.fold Line.link [] //TODO:[Posibly Improve Performance]确认fold不会计算整个list
                 let network stations=
                     let line network startStation=
-                        let line=line startStation network stations|>List.take 3 //TODO:有的有有的没有，需要更新line函数
+                        let line=line startStation network stations|>List.truncate 3 //TODO:[Posibly Improve Performance]确认List.truncate不会计算整个list
                         line,line::network
                     //Seq.unfold line []
-                    stations|>Seq.shuffle|>Seq.mapFold line []|>fst //TODO:对shuffle在Seq链中的次序做更多测试，测试把shuffle放在mapFold后面是否还能在mapFold过程中得到正确的state
+                    stations|>(*Seq.shuffle|>*)Seq.mapFold line []|>fst //TODO:对shuffle在Seq链中的次序做更多测试，测试把shuffle放在mapFold后面是否还能在mapFold过程中得到正确的state
     type Metro=Station list*Network
     type Game=Size*Metro
     open PlayerOperations.FakePlayer.Random
     let sample:Game=
         let grids=Grid.create 99 99
-        let stations=grids|>Station.randomSeq 15|>Seq.toList
+        let stations=grids|>Station.randomSeq 11|>Seq.toList
         let lines=network stations|>Seq.take 3|>Seq.toList
         //let lines=[Line.random stations 4;Line.random stations 3;Line.random stations 2]
         grids,(stations,lines)
