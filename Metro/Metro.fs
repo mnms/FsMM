@@ -33,13 +33,52 @@ module Geometry=
             type Point=Coordinate
             type Line=Point*Point
             type Polyline=Point list
+            module RelativeDirection= /// refers https://en.wikipedia.org/wiki/Relative_direction
+                let isOn45Degree((x1,y1),(x2,y2))=x1=x2||y1=y2||abs x1-x2=abs y1-y2
+                type Direction=Up|Down|Left|Right|UpperLeft|UpperRight|LowerLeft|LowerRight
+                let oppositeOf=function Up->Down|Down->Up|Left->Right|Right->Left|UpperLeft->LowerRight|UpperRight->LowerLeft|LowerLeft->UpperRight|LowerRight->UpperLeft
+                let getDirection(x1,y1)(x2,y2)=
+                    if y1=y2 then if x1=x2 then notSupported()elif x1<x2 then Left else Right
+                        elif y1>y2 then if x1=x2 then Up elif x1<x2 then UpperLeft else UpperRight
+                        elif x1=x2 then Down elif x1<x2 then LowerLeft else LowerRight
+            module Movement=
+                open RelativeDirection
+                let forward distance=Up,distance
+                assert(forward 5=(Up,5))
+                let move((x,y),(direction,position))=
+                    let distance=1
+                    let implementByRecordingByList=
+                        let move direction distance __=(direction,distance)::__
+                        let right=move Direction.Right
+                        let calc=Seq.sumBy snd
+                        let move2= ///Incompleted
+                            move direction distance>>right(int position)>>calc
+                        let move2= ///Incompleted
+                            move direction distance|>fun a b->a
+                        let move3= ///Incompleted
+                            let from __=List.singleton(Direction.Left,__)
+                            let calc=Seq.sumBy snd
+                            from>>move direction distance>>right(int position)>>calc
+                        let move4= ///Incompleted
+                            let from=List.empty
+                            let calc a b=Seq.sumBy snd a|>(+)b
+                            from|>move direction distance|>right(int position)|>calc
+                        ()
+                    let implementByTailCall=
+                        let from a ()=a
+                        let move direction distance=from>>fun a->a()|>fun(x,y)()->x+distance,y+distance
+                        let right=move Direction.Right
+                        ()
+                    let positions=[0;1;-1;2;-2]
+                    let fix=positions.[int position]
+                    x+fix,y+fix
         module Grid=
             type Grid=int*int
             type Index=int
             type Position=Index*Index
             let create w h=(w,h)
             let toSeq(w,h)={5..10..w-1}|>Seq.collect(fun x->{5..10..h-1}|>Seq.map(fun y->x,y))
-        module RelativeDirection= /// refers https://en.wikipedia.org/wiki/Relative_direction
+        module ScreenVisualDirection=
             let isOn45Degree((x1,y1),(x2,y2))=x1=x2||y1=y2||abs x1-x2=abs y1-y2
             type Direction=Up|Down|Left|Right|UpperLeft|UpperRight|LowerLeft|LowerRight
             let oppositeOf=function Up->Down|Down->Up|Left->Right|Right->Left|UpperLeft->LowerRight|UpperRight->LowerLeft|LowerLeft->UpperRight|LowerRight->UpperLeft
@@ -49,7 +88,7 @@ module Geometry=
                     elif x1=x2 then Down elif x1<x2 then LowerLeft else LowerRight
 module Metro=
     open Geometry.Plane
-    open RelativeDirection
+    open ScreenVisualDirection
     open Grid
     type Size=Grid
     type Station=Position
@@ -127,14 +166,17 @@ module Presentation=
     //type[<Measure>]m and[<Measure>]dm and[<Measure>]cm
     //let cmPerM=1000<cm/m>
     module Line=
+        let width=1
+        module Direction=Geometry.Plane.ScreenVisualDirection
         let calculate connections=
             let calculatePointsForConnection(a,b)=
                 //let current,previous=List.head exsistings,exsistings|>List.tail|>List.head
-                let applyStopNumberPositionFix((x,y),(direction,position))=
+                let applyEntryPositionFix((x,y),(direction,position))=
+                    let distance=width*2
                     let positions=[0;1;-1;2;-2]
                     let fix=positions.[int position]
                     x+fix,y+fix
-                let current,previous=applyStopNumberPositionFix a,applyStopNumberPositionFix b
+                let current,previous=applyEntryPositionFix a,applyEntryPositionFix b
                 //let applyCurrentStopNumberPositionFix,applyPreviousStopNumberPositionFixcurrent=applyStopNumberPositionFix current,applyStopNumberPositionFix previous
                 let isOn45Degree(x1,y1)(x2,y2)=x1=x2||y1=y2||abs x1-x2=abs y1-y2
                 if isOn45Degree current previous then[current;previous]
